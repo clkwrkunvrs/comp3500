@@ -1,4 +1,3 @@
-
 /*****************************************************************************\
 * Laboratory Exercises COMP 3500                                              *
 * Author: Saad Biaz                                                           *
@@ -127,6 +126,7 @@ void IO() {
     PCB = DequeueProcess(WAITINGQUEUE); // Remove PCB from WAITINGQUEUE
     if(PCB->TimeIOBurstDone <= Now()) { // If PCB IO burst is done
       waitingSize--;
+
       //printf("%f", Now());
       //printf(" IO Done for PID: ");
       //printf("%d", PCB->ProcessID);
@@ -191,7 +191,9 @@ void FCFS() {
     return;
   }
   readySize--;
+  printf("%d THIS IS THE RUNNING QUEUE\n",RUNNINGQUEUE);
   EnqueueProcess(RUNNINGQUEUE, PCB); // Place PCB in RUNNINGQUEUE
+    printf("%d THIS IS THE RUNNING QUEUE\n",RUNNINGQUEUE);
   runningSize++;
   PCB->state = RUNNING; // Update PCB state
   //printf("%f", Now());
@@ -201,8 +203,23 @@ void FCFS() {
 }
 
 void SRTF() {
-
+// PCB *test = PCB->QueueParmsTag.tail;
+//PCB->state = RUNNING;
+// printf("%d",RUNNINGQUEUE);
+if (runningSize >= 1) return;
+ProcessControlBlock *PCB = Queues[1].tail;
+if (PCB == NULL) return;
+ProcessControlBlock *PCB2 = Queues[1].tail;
+for(int i = 0; i < runningSize; i++) { // Scan the runningQueue
+  if (PCB2->TotalJobDuration - PCB2->TimeInCpu < PCB->TotalJobDuration - PCB2->TimeInCpu) PCB = PCB2;
+  EnqueueProcess(READYQUEUE, DequeueProcess(READYQUEUE));
 }
+EnqueueProcess(RUNNINGQUEUE, PCB);
+readySize--;
+runningSize++;
+PCB->state = RUNNING;
+  }
+
 
 void RR(int quantum) {
 
