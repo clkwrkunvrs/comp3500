@@ -77,33 +77,31 @@ void Dispatcher();
 \*****************************************************************************/
 
 int main (int argc, char **argv) {
-  if (argc == 2) { // One Arguments
-    choice = *argv[1]; // Algorithm Choice
+  if (argc == 2) { // One arguments
+    choice = *argv[1]; // Algorithm choice
   }
-
-  if (argc == 3 || argc == 4) { // Two Arguments
-  choice = *argv[1]; // Algorithm Choice
-  quantum = *argv[2] - '0'; // Quantum
+  if (argc == 3 || argc == 4) { // Two or three arguments
+    choice = *argv[1]; // Algorithm choice
+    quantum = *argv[2] - '0'; // Quantum
   }
-
-   if (Initialization(argc,argv)){
-     ManageProcesses();
-   }
+  if (Initialization(argc,argv)){
+    ManageProcesses();
+  }
 } /* end of main function */
 
 /***********************************************************************\
- * Input : none                                                          *
- * Output: None                                                          *
- * Function: Monitor Sources and process events (written by students)    *
- \***********************************************************************/
+* Input : none                                                          *
+* Output: None                                                          *
+* Function: Monitor Sources and process events (written by students)    *
+\***********************************************************************/
 
 void ManageProcesses(void){
   ManagementInitialization(); // Initialize Resources??
   while (1) {
-      IO();
-      CPUScheduler();
-      Dispatcher();
-    }
+    IO();
+    CPUScheduler();
+    Dispatcher();
+  }
 }
 
 void IO() {
@@ -113,72 +111,47 @@ void IO() {
       break;
     }
     runningSize--;
-    PCB->TimeEnterWaiting = Now();
+    PCB->TimeEnterWaiting = Now(); // Set TimeEnterWaiting
     EnqueueProcess(WAITINGQUEUE, PCB); // Place PCB in WAITINGQUEUE
     waitingSize++;
     PCB->state = WAITING;
-    //printf("%f", Now());
-    //printf(" *** PID: ");
-    //printf("%d", PCB->ProcessID);
-    //printf(" placed in IO\n");
     PCB->TimeIOBurstDone = Now() + PCB->IOBurstTime; // Set time IO burst will be completed
     //printf("%f", Now());
     //printf(" *** PID: ");
     //printf("%d", PCB->ProcessID);
-    //printf(" Time IO Done: ");
+    //printf(" placed in IO. Time IO Done: ");
     //printf("%f", PCB->TimeIOBurstDone);
     //printf("\n");
   }
   for(int i = 0; i < waitingSize; i++) { // Scan the WAITINGQUEUE
     PCB = DequeueProcess(WAITINGQUEUE); // Remove PCB from WAITINGQUEUE
     if(PCB->TimeIOBurstDone <= Now()) { // If PCB IO burst is done
+      waitingSize--;
       //printf("%f", Now());
       //printf(" IO Done for PID: ");
       //printf("%d", PCB->ProcessID);
       //printf("\n");
-      /*
-      if(i == 0) {
-        //WAITINGQUEUE->Head = currentPCB->next;
-        currentPCB->next = NULL;
-      }
-      else if(i == waitingSize - 1) {
-        currentPCB->previous->next = NULL;
-      }
-      else {
-        currentPCB->previous->next = currentPCB->next;
-        currentPCB->next = NULL;
-      }
-      */
-      waitingSize--;
-      //printf("###waitingSize: ");
-      //printf("%d", waitingSize);
-          //printf("\n");
       if(PCB->TotalJobDuration <= PCB->TimeInCpu) { // If PCB job is done
-          PCB->JobExitTime = Now();
+        PCB->JobExitTime = Now(); // Set JobExitTime
         EnqueueProcess(EXITQUEUE, PCB); // Place PCB in EXITQUEUE
         exitSize++;
-        PCB->state = DONE;
-        q++;
-        //printf("###exitSize: ");
-        //printf("%d", exitSize);
-            //printf("\n");
+        PCB->state = DONE; // Update PCB state
         //printf("%f", Now());
         //printf(" *** PID ");
         //printf("%d", PCB->ProcessID);
         //printf(" job completed. Placed in EXITQUEUE.\n");
+
+        // q++;
         // if(q >= 10) {
         // BookKeeping();
         // }
       }
       else { // PCB job is not done
-        PCB->TimeInWaitQueue = PCB->TimeInWaitQueue + Now() - PCB->TimeEnterWaiting;
-        lastReady = Now();
+        PCB->TimeInWaitQueue = PCB->TimeInWaitQueue + Now() - PCB->TimeEnterWaiting; // Update TimeInWaitQueue
+        lastReady = Now(); // Used to calculate TimeInReadyQueue
         EnqueueProcess(READYQUEUE, PCB); // Place PCB in READYQUEUE
         readySize++;
-        PCB->state = READY;
-        //printf("###readySize: ");
-        //printf("%d", readySize);
-            //printf("\n");
+        PCB->state = READY; // Update PCB state
         //printf("%f", Now());
         //printf(" *** PID ");
         //printf("%d", PCB->ProcessID);
@@ -217,23 +190,15 @@ void FCFS() {
   if (PCB == NULL) { // If no PCB in READYQUEUE, Return
     return;
   }
-  //printf("Scheduling\n");
   readySize--;
-  //printf("###readySize: ");
-          //printf("%d", readySize);
-              //printf("\n");
   EnqueueProcess(RUNNINGQUEUE, PCB); // Place PCB in RUNNINGQUEUE
   runningSize++;
-  PCB->state = RUNNING;
-  //printf("###runningSize: ");
-          //printf("%d", runningSize);
-              //printf("\n");
-
+  PCB->state = RUNNING; // Update PCB state
   //printf("%f", Now());
   //printf(" *** PID ");
   //printf("%d", PCB->ProcessID);
   //printf(" in RUNNINGQUEUE.\n");
-  }
+}
 
 void SRTF() {
 
@@ -248,24 +213,21 @@ void Dispatcher() {
   if (PCB == NULL) { // If no PCB in RUNNINGQUEUE, Return
     return;
   }
-  //printf("Dispatching\n");
   runningSize--;
-  //printf("###runningSize: ");
-          //printf("%d", runningSize);
-              //printf("\n");
   if(PCB->TimeInReadyQueue == 0) {
-    PCB->TimeInReadyQueue = Now() - PCB->JobStartTime;
+    PCB->TimeInReadyQueue = Now() - PCB->JobStartTime; // Set TimeInReadyQueue
     //printf("&&& TimeInReadyQueue: ");
     //printf("%f", PCB->TimeInReadyQueue);
     //printf("\n");
   }
   else {
-  PCB->TimeInReadyQueue = PCB->TimeInReadyQueue + Now() - lastReady;
-  //printf("&&& TimeInReadyQueue: ");
-  //printf("%f", PCB->TimeInReadyQueue);
-  //printf("\n");
+    PCB->TimeInReadyQueue = PCB->TimeInReadyQueue + Now() - lastReady; // Update TimeInReadyQueue
+    //printf("&&& TimeInReadyQueue: ");
+    //printf("%f", PCB->TimeInReadyQueue);
+    //printf("\n");
   }
   if(PCB->TimeInCpu == 0) { // If first time in CPU
+    PCB->StartCpuTime = Now(); // Set StartCpuTime
     //printf("---------------------\nTotalJobDuration: ");
     //printf("%f", PCB->TotalJobDuration);
     //printf("\n");
@@ -275,15 +237,13 @@ void Dispatcher() {
     //printf("IOBurstTime: ");
     //printf("%f", PCB->IOBurstTime);
     //printf("\n---------------------\n");
-    PCB->StartCpuTime = Now(); // Set CPU start time stamp
   }
   //printf("%f", Now());
   //printf(" *** PID ");
   //printf("%d", PCB->ProcessID);
   //printf(" selected for CPU.\n");
-
   OnCPU(PCB, PCB->CpuBurstTime); // Simulate CPU usage
-  PCB->TimeInCpu = PCB->TimeInCpu + PCB->CpuBurstTime; // Set time in CPU
+  PCB->TimeInCpu = PCB->TimeInCpu + PCB->CpuBurstTime; // Set TimeInCpu
   //printf("%f", Now());
   //printf(" *** PID ");
   //printf("%d", PCB->ProcessID);
@@ -292,9 +252,6 @@ void Dispatcher() {
   //printf("\n");
   EnqueueProcess(RUNNINGQUEUE, PCB); // Place PCB in RUNNINGQUEUE
   runningSize++;
-  //printf("###runningSize: ");
-          //printf("%d", runningSize);
-              //printf("\n");
 }
 
 /***********************************************************************\
@@ -333,11 +290,9 @@ void BookKeeping(void){
 
   for(int i = 0; i < exitSize; i++) { // Scan the EXITQUEUE
     PCB = DequeueProcess(EXITQUEUE); // Remove PCB from EXITQUEUE
-
     //printf("-----------------\nPID: ");
     //printf("%d", PCB->ProcessID);
     //printf("\n");
-    /*
     //printf("JobExitTime: ");
     //printf("%f", PCB->JobExitTime);
     //printf("\n");
@@ -352,9 +307,10 @@ void BookKeeping(void){
     //printf("\n");
     //printf("TimeInReadyQueue: ");
     //printf("%f", PCB->TimeInReadyQueue);
-    //printf("\n-----------------\n");*/
+    //printf("\n-----------------\n");
 
     ATAT = ATAT + PCB->JobExitTime - PCB->JobArrivalTime;
+
     //printf("%f", ATAT);
     //printf("\n");
 
@@ -373,7 +329,7 @@ void BookKeeping(void){
     CBT = CBT + PCB->TimeInCpu;
     AWT = AWT + PCB->TimeInReadyQueue;
 
-    double WT = PCB->TimeInReadyQueue;
+    //double WT = PCB->TimeInReadyQueue;
     //printf("Waiting Time: ");
     //printf("%f", WT);
     //printf("\n-----------------\n");
@@ -384,12 +340,9 @@ void BookKeeping(void){
     EnqueueProcess(EXITQUEUE, PCB); // Place PCB in EXITQUEUE
   }
   ATAT = ATAT / exitSize;
-
   ART = ART / exitSize;
-
   CBT = CBT / end;
   T = exitSize / end;
-
   AWT = AWT / exitSize;
 
   printf("ATAT: ");
@@ -424,14 +377,11 @@ void LongtermScheduler(void){
   if (PCB == NULL) { // If no PCB in JOBQUEUE, Return
     return;
   }
-  PCB->TimeInJobQueue = Now() - PCB->JobArrivalTime;
-  PCB->JobStartTime = Now();
+  PCB->TimeInJobQueue = Now() - PCB->JobArrivalTime; // Set TimeInJobQueue
+  PCB->JobStartTime = Now(); // Set JobStartTime
   EnqueueProcess(READYQUEUE, PCB); // Place PCB in READYQUEUE
   readySize++;
-  PCB->state = READY;
-  //printf("###readySize: ");
-        //printf("%d", readySize);
-    //printf("\n");
+  PCB->state = READY; // Update PCB state
   //printf("%f", Now());
   //printf(" *** PID ");
   //printf("%d", PCB->ProcessID);
