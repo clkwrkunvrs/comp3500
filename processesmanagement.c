@@ -144,11 +144,12 @@ void IO() {
         printf(" *** PID ");
         printf("%d", PCB->ProcessID);
         printf(" job completed. Placed in EXITQUEUE.\n");
-
+        /*
         q++;
         if(q >= 10) {
           BookKeeping();
         }
+        */
       }
       else { // PCB job is not done
         PCB->TimeInWaitQueue = PCB->TimeInWaitQueue + Now() - PCB->TimeEnterWaiting; // Update TimeInWaitQueue
@@ -206,29 +207,55 @@ void FCFS() {
 
 void SRTF() {
   ProcessControlBlock *PCB1 = Queues[1].Tail; // Points to tail of READYQUEUE
+  ProcessControlBlock *PCB2;
+  ProcessControlBlock *PCB3;
   if (runningSize >= 1 || PCB1 == NULL) { // If no PCB in READYQUEUE, Return
     return;
   }
-  ProcessControlBlock *PCB2 = Queues[1].Tail;
-  for(int i = 0; i < runningSize; i++) { // Scan the runningQueue
+  for(int i = 0; i < readySize; i++) { // Scan the runningQueue
+    PCB2 = Queues[1].Tail;
     if (PCB2->TotalJobDuration - PCB2->TimeInCpu < PCB1->TotalJobDuration - PCB1->TimeInCpu) {
       PCB1 = PCB2;
     }
     EnqueueProcess(READYQUEUE, DequeueProcess(READYQUEUE));
   }
-  EnqueueProcess(RUNNINGQUEUE, PCB1);
-  readySize--;
-  runningSize++;
-  PCB1->state = RUNNING;
 
-  printf("%f", Now());
-  printf(" *** PID ");
-  printf("%d", PCB1->ProcessID);
-  printf(" in RUNNINGQUEUE.\n");
+  for(int i = 0; i < readySize; i++) { // Scan the runningQueue
+    PCB3 = Queues[1].Tail;
+    if (PCB1 == PCB3) {
+      EnqueueProcess(RUNNINGQUEUE, DequeueProcess(READYQUEUE));
+      readySize--;
+      runningSize++;
+      PCB1->state = RUNNING;
+
+      printf("%f", Now());
+      printf(" *** PID ");
+      printf("%d", PCB1->ProcessID);
+      printf(" in RUNNINGQUEUE test.\n");
+
+      return;
+    }
+    EnqueueProcess(READYQUEUE, DequeueProcess(READYQUEUE));
+  }
 }
 
 void RR(int quantum) {
+  ProcessControlBlock *PCB = Queues[1].Tail; // Points to tail of READYQUEUE
+  if (runningSize >= 1 || PCB == NULL) { // If no PCB in READYQUEUE, Return
+    return;
+  }
+  if(PCB->CpuBurstTime > quantum) {
+    PCB->CpuBurstTime = quantum;
+  }
+  EnqueueProcess(RUNNINGQUEUE, DequeueProcess(READYQUEUE)); // Place PCB in RUNNINGQUEUE from READYQUEUE
+  readySize--;
+  runningSize++;
+  PCB->state = RUNNING; // Update PCB state
 
+  printf("%f", Now());
+  printf(" *** PID ");
+  printf("%d", PCB->ProcessID);
+  printf(" in RUNNINGQUEUE.\n");
 }
 
 void Dispatcher() {
@@ -414,7 +441,7 @@ void LongtermScheduler(void){
   printf("%f", Now());
   printf(" *** PID ");
   printf("%d", PCB->ProcessID);
-  printf(" in READYQUEUE.\n");
+  printf(" in READYQUEUE longterm.\n");
 }
 
 /***********************************************************************\
