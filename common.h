@@ -47,10 +47,10 @@ typedef unsigned        Memory;
 #define  FALSE               0     /* False condition                        */
 #define  TRUE                1     /* True condition                         */
 
-#define  RATIO_TOTAL_CPUBURST 5.0  /* Ratio TotalJobDuration to CpuBurstTime */
-#define  RATIO_IOBURST_CPUBURST 9.0 /* Ratio IOBurst to CPU Burst           */
+#define  RATIO_TOTAL_CPUBURST 4.0  /* Ratio TotalJobDuration to CpuBurstTime */
+#define  RATIO_IOBURST_CPUBURST 3.0 /* Ratio IOBurst to CPU Burst           */
 #define  MAXFRACTIONMEMORY   0.02  /* Maximum Fraction of all memory for proc*/
-#define  CONTEXTSWITCHOVERHEAD 0.05 /* Computing Overhead due to Context Switch */
+#define  CONTEXTSWITCHOVERHEAD 0.0001 /* Computing Overhead due to Context Switch */
 /*****************************************************************************\
 *                            Global data structures                           *
 \*****************************************************************************/
@@ -68,6 +68,7 @@ typedef struct ProcessControlBlockTag{
   TimePeriod TimeIOBurstDone;  /* Time when current I/O will be done       */
   Timestamp  JobStartTime;     /* Time when job first entered ready queue  */
   Timestamp  StartCpuTime;     /* Time when job was first placed on CPU    */
+  Timestamp  TimeEnterWaiting; /* Last time Job Entered the Waiting Queue  */
   Timestamp  JobExitTime;      /* Time when job first entered exit queue   */
   TimePeriod TimeInReadyQueue; /* Total time process spent in ready queue  */
   TimePeriod TimeInWaitQueue;  /* Total time process spent in wait queue   */
@@ -89,37 +90,37 @@ typedef struct QueueParmsTag{
 extern Flag                  Show;
 extern QueueParms            Queues[MAXQUEUES];   /* Head and Tails for Job, Ready...queues  */
 extern Identifier            PolicyNumber; /* (1:FCFS) , (2:SRTF), (3:RR) */
-extern TimePeriod            Quantum;
+extern TimePeriod            Quantum;        
 
 /*****************************************************************************\
 *                               Function prototypes                           *
 \*****************************************************************************/
 
-/***********************************************************************\
-* Input    : None                                                       *
-* Output   : Returns the current system time                            *
+/***********************************************************************\                    
+* Input    : None                                                       *                    
+* Output   : Returns the current system time                            *                        
 \***********************************************************************/
 extern Timestamp            Now(void);
 
-/***********************************************************************\
- * Input : Queue where to enqueue and Element to enqueue                 *
- * Output: Updates Head and Tail as needed                               *
- * Function: Enqueues FIFO element in queue and updates tail and head    *
+/***********************************************************************\                         
+ * Input : Queue where to enqueue and Element to enqueue                 *                        
+ * Output: Updates Head and Tail as needed                               *                        
+ * Function: Enqueues FIFO element in queue and updates tail and head    *                        
 \***********************************************************************/
 extern void                 EnqueueProcess(Queue whichQueue,
 					   ProcessControlBlock *whichProcess);
 
-/***********************************************************************\
- * Input : Queue from which to dequeue                                  *
- * Output: Tail of queue                                                *
- * Function: Removes tail element and updates tail and head accordingly *
+/***********************************************************************\                         
+ * Input : Queue from which to dequeue                                  *                         
+ * Output: Tail of queue                                                *                         
+ * Function: Removes tail element and updates tail and head accordingly *                        
 \***********************************************************************/
 extern ProcessControlBlock *DequeueProcess(Queue whichQueue);
 
-/***********************************************************************\
- * Input : none                                                          *
- * Output: None                                                          *
- * Function: CPU executes whichProcess for CPUBurst                      *
+/***********************************************************************\                         
+ * Input : none                                                          *                        
+ * Output: None                                                          *                        
+ * Function: CPU executes whichProcess for CPUBurst                      *                        
 \***********************************************************************/
 extern void                 OnCPU(ProcessControlBlock *whichProcess, TimePeriod CPUBurst);
 
@@ -129,8 +130,19 @@ extern void                 BookKeeping(void);
 extern Flag                 Initialization(int argc, char **argv);
 extern void                 DisplayProcess(char c,ProcessControlBlock *whichProcess);
 extern void                 DisplayQueue(char *str, Queue whichQueue);
-extern void                 fillReady();
-extern void                 FCFS();
-extern void                 SRTF();
-extern void                 RR(int quantum);
-extern void                 DoIO(ProcessControlBlock PCB);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
