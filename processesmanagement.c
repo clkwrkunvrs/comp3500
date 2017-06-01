@@ -38,13 +38,10 @@
 *                                  Global data                                *
 \*****************************************************************************/
 
-int choice;
-double quantum = 5; // This is only set so in the case where ./pm 1 is called My Numbers matches the Behind The Scences output.
-int show = 0; // Same as above
-int readySize = 0;
-int runningSize = 0;
-int waitingSize = 0;
-int exitSize = 0;
+int readySize;
+int runningSize;
+int waitingSize;
+int exitSize;
 
 /*****************************************************************************\
 *                               Function prototypes                           *
@@ -76,18 +73,6 @@ void Dispatcher();
 \*****************************************************************************/
 
 int main (int argc, char **argv) {
-  if (argc == 2) { // One arguments
-    choice = atoi(argv[1]); // Algorithm choice
-  }
-  else if (argc == 3) { // Two or three arguments
-    choice = atoi(argv[1]); // Algorithm choice
-    quantum = atoi(argv[2]); // Quantum
-  }
-  else if (argc == 4) { // Two or three arguments
-    choice = atoi(argv[1]); // Algorithm choice
-    quantum = atoi(argv[2]); // Quantum
-    show = atoi(argv[3]); // Show option
-  }
   if (Initialization(argc,argv)){
     ManageProcesses();
   }
@@ -100,6 +85,7 @@ int main (int argc, char **argv) {
 \***********************************************************************/
 
 void ManageProcesses(void){
+  ManagementInitialization();
   while (1) {
     IO();
     CPUScheduler();
@@ -146,7 +132,7 @@ void IO() {
 }
 
 void CPUScheduler() {
-  switch (choice) {
+  switch (PolicyNumber) {
     case 1:
     FCFS();
     break;
@@ -209,8 +195,8 @@ void RR() {
   if (runningSize >= 1 || PCB == NULL) { // If no PCB in READYQUEUE or RUNNINGQUEUE is full, Return
     return;
   }
-  if(PCB->CpuBurstTime > quantum) { // If PCB CpuBurstTime > quantum, CpuBurstTime = quantum
-    PCB->CpuBurstTime = quantum;
+  if(PCB->CpuBurstTime > Quantum) { // If PCB CpuBurstTime > quantum, CpuBurstTime = quantum
+    PCB->CpuBurstTime = Quantum;
   }
   EnqueueProcess(RUNNINGQUEUE, DequeueProcess(READYQUEUE)); // Place PCB in RUNNINGQUEUE from READYQUEUE
   readySize--;
@@ -219,6 +205,7 @@ void RR() {
 }
 
 void Dispatcher() {
+  double start;
   ProcessControlBlock *PCB = Queues[RUNNINGQUEUE].Tail; // Points to tail of RUNNINGQUEUE
   if (PCB == NULL) { // If no PCB in RUNNINGQUEUE, Return
     return;
@@ -256,6 +243,34 @@ void BookKeeping(void){
   double AWT;
   ProcessControlBlock *PCB;
 
+  for(int i = 0; i < readySize; i++) { // Scan the READYQUEUE
+    PCB = Queues[READYQUEUE].Tail; // Points to tail of READYQUEUE
+    CBT += PCB->TimeInCpu;
+    AWT += PCB->TimeInReadyQueue;
+    if(PCB->StartCpuTime != 0) {
+      ART += PCB->StartCpuTime - PCB->JobArrivalTime;
+    }
+    EnqueueProcess(READYQUEUE, DequeueProcess(READYQUEUE)); // Place PCB in READYQUEUE
+  }
+
+  for(int i = 0; i < runningSize; i++) { // Scan the RUNNINGQUEUE
+    PCB = Queues[RUNNINGQUEUE].Tail; // Points to tail of RUNNINGQUEUE
+    CBT += PCB->TimeInCpu;
+    AWT += PCB->TimeInReadyQueue;
+    if(PCB->StartCpuTime != 0) {
+      ART += PCB->StartCpuTime - PCB->JobArrivalTime;
+    }
+    EnqueueProcess(RUNNINGQUEUE, DequeueProcess(RUNNINGQUEUE)); // Place PCB in RUNNINGQUEUE
+  }
+
+  for(int i = 0; i < waitingSize; i++) { // Scan the WAITINGQUEUE
+    PCB = Queues[WAITINGQUEUE].Tail; // Points to tail of WAITINGQUEUE
+    ART += PCB->StartCpuTime - PCB->JobArrivalTime;
+    CBT += PCB->TimeInCpu;
+    AWT += PCB->TimeInReadyQueue;
+    EnqueueProcess(WAITINGQUEUE, DequeueProcess(WAITINGQUEUE)); // Place PCB in WAITINGQUEUE
+  }
+
   for(int i = 0; i < exitSize; i++) { // Scan the EXITQUEUE
     PCB = Queues[EXITQUEUE].Tail; // Points to tail of EXITQUEUE
     ATAT += PCB->JobExitTime - PCB->JobArrivalTime;
@@ -270,10 +285,9 @@ void BookKeeping(void){
   CBT /= end;
   T = exitSize / end;
   AWT /= exitSize;
-  quantum /= 1000; // Converts quantum to seconds for output below
 
   printf("\n********* My Numbers *************************************************\n");
-  printf("Policy Number = %d, Quantum = %.6f   Show = %d\n", choice, quantum, show);
+  printf("Policy Number = %d, Quantum = %.6f   Show = %d\n", PolicyNumber, Quantum, Show);
   printf("Number of Completed Processes = %d\n", exitSize);
   printf("ATAT=%f   ART=%f  CBT = %f  T=%f AWT=%f\n", ATAT, ART, CBT, T, AWT);
 
@@ -319,5 +333,9 @@ void LongtermScheduler(void){
 * Output: TRUE if Intialization successful                              *
 \***********************************************************************/
 Flag ManagementInitialization(void){
+  readySize = 0;
+  runningSize = 0;
+  waitingSize = 0;
+  exitSize = 0;
   return TRUE;
 }
