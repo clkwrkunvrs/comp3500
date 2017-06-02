@@ -94,8 +94,9 @@ void ManageProcesses(void){
 }
 
 void IO() {
+  int i;
   ProcessControlBlock *PCB = Queues[RUNNINGQUEUE].Tail; // Points to tail of RUNNINGQUEUE
-  for(int i = 0; i < 1; i++) { // If RUNNINGQUEUE is empty, still need to check WAITINGQUEUE
+  for(i = 0; i < 1; i++) { // If RUNNINGQUEUE is empty, still need to check WAITINGQUEUE
     if (PCB == NULL) { // If no PCB in RUNNINGQUEUE, Return
       break;
     }
@@ -107,7 +108,7 @@ void IO() {
     PCB->state = WAITING; // Update PCB state
   }
 
-  for(int i = 0; i < waitingSize; i++) { // Scan the WAITINGQUEUE
+  for(i = 0; i < waitingSize; i++) { // Scan the WAITINGQUEUE
     ProcessControlBlock *PCB = Queues[WAITINGQUEUE].Tail; // Points to tail of WAITINGQUEUE
     if(PCB->TimeIOBurstDone <= Now()) { // If PCB IO burst is done
       if(PCB->TotalJobDuration <= PCB->TimeInCpu) { // If PCB job is done
@@ -162,6 +163,7 @@ void FCFS() {
 }
 
 void SRTF() {
+  int i;
   ProcessControlBlock *PCB1 = Queues[READYQUEUE].Tail; // Points to tail of READYQUEUE
   ProcessControlBlock *PCB2;
   ProcessControlBlock *PCB3;
@@ -169,7 +171,7 @@ void SRTF() {
     return;
   }
 
-  for(int i = 0; i < readySize; i++) { // Scan the runningQueue
+  for(i = 0; i < readySize; i++) { // Scan the runningQueue
     PCB2 = Queues[READYQUEUE].Tail;
     if (PCB2->TotalJobDuration - PCB2->TimeInCpu < PCB1->TotalJobDuration - PCB1->TimeInCpu) { // If PCB2 SRT < PCB1 SRT, PCB1 = PCB2
       PCB1 = PCB2;
@@ -177,7 +179,7 @@ void SRTF() {
     EnqueueProcess(READYQUEUE, DequeueProcess(READYQUEUE)); // Place PCB in front of READYQUEUE from back of READYQUEUE
   }
 
-  for(int i = 0; i < readySize; i++) { // Scan the RUNNINGQUEUE
+  for(i = 0; i < readySize; i++) { // Scan the RUNNINGQUEUE
     PCB3 = Queues[READYQUEUE].Tail;
     if (PCB1 == PCB3) { // If currently at the minimum SRT, remove it from READYQUEUE and move to RUNNINGQUEUE
       EnqueueProcess(RUNNINGQUEUE, DequeueProcess(READYQUEUE));
@@ -210,12 +212,12 @@ void Dispatcher() {
   if (PCB == NULL) { // If no PCB in RUNNINGQUEUE, Return
     return;
   }
+  PCB->TimeInReadyQueue += Now() - PCB->JobStartTime; // Set TimeInReadyQueue
   if(PCB->TimeInCpu == 0) { // If first time in CPU
     PCB->StartCpuTime = Now(); // Set StartCpuTime
   }
-  PCB->TimeInReadyQueue += Now() - PCB->JobStartTime; // Set TimeInReadyQueue
   OnCPU(PCB, PCB->CpuBurstTime); // Simulate CPU usage
-  PCB->TimeInCpu = PCB->TimeInCpu + PCB->CpuBurstTime; // Set TimeInCpu
+  PCB->TimeInCpu += PCB->CpuBurstTime; // Set TimeInCpu
 }
 
 /***********************************************************************\
@@ -229,13 +231,15 @@ void NewJobIn(ProcessControlBlock whichProcess){
   /* Add Job to the Job Queue */
   NewProcess = (ProcessControlBlock *) malloc(sizeof(ProcessControlBlock));
   memcpy(NewProcess,&whichProcess,sizeof(whichProcess));
+  NewProcess->TimeInCpu = 0; // Fixes TUX error
   EnqueueProcess(JOBQUEUE,NewProcess);
   DisplayQueue("Job Queue in NewJobIn",JOBQUEUE);
   LongtermScheduler(); /* Job Admission  */
 }
 
 void BookKeeping(void){
-  double end = Now();
+  double end = Now(); // Total time for all processes to arrive
+  int i;
   double ATAT;
   double ART;
   double CBT;
@@ -243,43 +247,44 @@ void BookKeeping(void){
   double AWT;
   ProcessControlBlock *PCB;
 
-  for(int i = 0; i < readySize; i++) { // Scan the READYQUEUE
+  for(i = 0; i < readySize; i++) { // Scan the READYQUEUE, sum all data
     PCB = Queues[READYQUEUE].Tail; // Points to tail of READYQUEUE
     CBT += PCB->TimeInCpu;
     AWT += PCB->TimeInReadyQueue;
-    if(PCB->StartCpuTime != 0) {
-      ART += PCB->StartCpuTime - PCB->JobArrivalTime;
-    }
+    // if(PCB->StartCpuTime != 0) { // Does not work on TUX, but logically correct
+    //   //ART += PCB->StartCpuTime - PCB->JobArrivalTime;
+    // }
     EnqueueProcess(READYQUEUE, DequeueProcess(READYQUEUE)); // Place PCB in READYQUEUE
   }
 
-  for(int i = 0; i < runningSize; i++) { // Scan the RUNNINGQUEUE
+  for(i = 0; i < runningSize; i++) { // Scan the RUNNINGQUEUE, sum all data
     PCB = Queues[RUNNINGQUEUE].Tail; // Points to tail of RUNNINGQUEUE
     CBT += PCB->TimeInCpu;
     AWT += PCB->TimeInReadyQueue;
-    if(PCB->StartCpuTime != 0) {
+    if(PCB->StartCpuTime != 0) { // Does not work on TUX, but logically correct
       ART += PCB->StartCpuTime - PCB->JobArrivalTime;
     }
     EnqueueProcess(RUNNINGQUEUE, DequeueProcess(RUNNINGQUEUE)); // Place PCB in RUNNINGQUEUE
   }
 
-  for(int i = 0; i < waitingSize; i++) { // Scan the WAITINGQUEUE
+  for(i = 0; i < waitingSize; i++) { // Scan the WAITINGQUEUE, sum all data
     PCB = Queues[WAITINGQUEUE].Tail; // Points to tail of WAITINGQUEUE
-    ART += PCB->StartCpuTime - PCB->JobArrivalTime;
     CBT += PCB->TimeInCpu;
     AWT += PCB->TimeInReadyQueue;
+    ART += PCB->StartCpuTime - PCB->JobArrivalTime;
     EnqueueProcess(WAITINGQUEUE, DequeueProcess(WAITINGQUEUE)); // Place PCB in WAITINGQUEUE
   }
 
-  for(int i = 0; i < exitSize; i++) { // Scan the EXITQUEUE
+  for(i = 0; i < exitSize; i++) { // Scan the EXITQUEUE, sum all data
     PCB = Queues[EXITQUEUE].Tail; // Points to tail of EXITQUEUE
     ATAT += PCB->JobExitTime - PCB->JobArrivalTime;
-    ART += PCB->StartCpuTime - PCB->JobArrivalTime;
     CBT += PCB->TimeInCpu;
     AWT += PCB->TimeInReadyQueue;
+    ART += PCB->StartCpuTime - PCB->JobArrivalTime;
     EnqueueProcess(EXITQUEUE, DequeueProcess(EXITQUEUE)); // Place PCB in EXITQUEUE
   }
 
+  // Compute averages and final results
   ATAT /= exitSize;
   ART /= exitSize;
   CBT /= end;
